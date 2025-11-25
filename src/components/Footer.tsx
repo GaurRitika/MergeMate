@@ -30,6 +30,11 @@ const Footer = () => {
                   Split PDF
                 </Link>
               </li>
+              <li>
+                <Link to="/pdf-to-word" className="text-muted-foreground hover:text-primary transition-base">
+                  PDF to Word
+                </Link>
+              </li>
               <li className="text-muted-foreground/50">PDF to Image (Coming Soon)</li>
               <li className="text-muted-foreground/50">Protect PDF (Coming Soon)</li>
             </ul>
@@ -41,9 +46,9 @@ const Footer = () => {
               <li>Merge PDF online free</li>
               <li>Compress PDF online</li>
               <li>Split PDF online</li>
+              <li>PDF to Word converter</li>
               <li>Combine PDF files</li>
-              <li>Reduce PDF size</li>
-              <li>PDF tools online free</li>
+              <li>Convert PDF to DOCX</li>
             </ul>
           </div>
           
@@ -64,8 +69,8 @@ const Footer = () => {
             © {new Date().getFullYear()} PDF Tools Online. All rights reserved.
           </p>
           <p className="text-xs text-muted-foreground mt-2">
-            Keywords: pdf tools online, merge pdf, compress pdf, split pdf, extract pdf pages, pdf converter, 
-            combine pdf, reduce pdf size, free pdf tools, online pdf editor, pdf joiner, pdf compressor, pdf splitter
+            Keywords: pdf tools online, merge pdf, compress pdf, split pdf, pdf to word, pdf to docx, extract pdf pages, 
+            pdf converter, combine pdf, reduce pdf size, free pdf tools, online pdf editor, pdf joiner, pdf compressor, pdf splitter
           </p>
         </div>
       </div>

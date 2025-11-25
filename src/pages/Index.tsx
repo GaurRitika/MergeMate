@@ -1,5 +1,5 @@
 import { Helmet } from "react-helmet";
-import { FileUp, FileDown, Scissors, FileImage, Lock, RotateCw } from "lucide-react";
+import { FileUp, FileDown, Scissors, FileText, FileImage, Lock, RotateCw } from "lucide-react";
 import Navigation from "@/components/Navigation";
 import ToolCard from "@/components/ToolCard";
 import Footer from "@/components/Footer";
@@ -23,6 +23,12 @@ const Index = () => {
       title: "Split PDF",
       description: "Extract pages or split PDF into multiple files",
       route: "/split-pdf"
+    },
+    {
+      icon: FileText,
+      title: "PDF to Word",
+      description: "Convert PDF to editable Word (.docx) files",
+      route: "/pdf-to-word"
     },
     {
       icon: FileImage,
