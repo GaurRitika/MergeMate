@@ -13,6 +13,7 @@ const Footer = () => {
     { to: "/pdf-to-jpg", label: "PDF to JPG" },
     { to: "/jpg-to-pdf", label: "JPG to PDF" },
     { to: "/compress-image", label: "Image Compressor" },
+    { to: "/remove-background", label: "Background Remover" },
   ];
 
   const popularSearches = [
@@ -20,9 +21,9 @@ const Footer = () => {
     "Compress PDF online",
     "Split PDF online",
     "PDF to Word converter",
-    "Word to PDF converter",
-    "PDF to JPG converter",
-    "Combine PDF files",
+    "Remove background from image",
+    "Image compressor online",
+    "AI background remover",
   ];
 
   const features = [

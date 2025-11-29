@@ -1,5 +1,5 @@
 import { Helmet } from "react-helmet";
-import { FileUp, FileDown, Scissors, FileText, FileImage, Lock, RotateCw, Shield, Zap, Sparkles, Check } from "lucide-react";
+import { FileUp, FileDown, Scissors, FileText, FileImage, Lock, RotateCw, Shield, Zap, Sparkles, Check, Eraser } from "lucide-react";
 import Navigation from "@/components/Navigation";
 import ToolCard from "@/components/ToolCard";
 import Footer from "@/components/Footer";
@@ -53,6 +53,12 @@ const Index = () => {
       title: "Image Compressor",
       description: "Compress JPG, PNG, WEBP images without quality loss",
       route: "/compress-image"
+    },
+    {
+      icon: Eraser,
+      title: "Background Remover",
+      description: "Remove image backgrounds instantly using AI",
+      route: "/remove-background"
     },
     {
       icon: Lock,

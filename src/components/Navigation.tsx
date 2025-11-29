@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { FileUp, FileDown, Home, Scissors, FileText, Image, Sparkles } from "lucide-react";
+import { FileUp, FileDown, Home, Scissors, FileText, Image, Sparkles, Eraser } from "lucide-react";
 
 const Navigation = () => {
   const location = useLocation();
@@ -9,9 +9,9 @@ const Navigation = () => {
     { to: "/merge-pdf", icon: FileUp, label: "Merge", short: "Merge" },
     { to: "/compress-pdf", icon: FileDown, label: "Compress", short: "Compress" },
     { to: "/split-pdf", icon: Scissors, label: "Split", short: "Split" },
-    { to: "/pdf-to-word", icon: FileText, label: "To Word", short: "Word" },
     { to: "/pdf-to-jpg", icon: Image, label: "To JPG", short: "JPG" },
-    { to: "/compress-image", icon: Image, label: "Img Compress", short: "Img" },
+    { to: "/compress-image", icon: Image, label: "Img Comp", short: "Img" },
+    { to: "/remove-background", icon: Eraser, label: "BG Remove", short: "BG" },
   ];
 
   return (
