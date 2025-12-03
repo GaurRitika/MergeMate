@@ -1,5 +1,5 @@
 import { Helmet } from "react-helmet";
-import { FileUp, FileDown, Scissors, FileText, FileImage, Lock, RotateCw, Shield, Zap, Sparkles, Check, Eraser, ArrowRight, Star } from "lucide-react";
+import { FileUp, FileDown, Scissors, FileText, FileImage, Shield, Zap, Sparkles, Check, Eraser, ArrowRight, Star } from "lucide-react";
 import Navigation from "@/components/Navigation";
 import ToolCard from "@/components/ToolCard";
 import Footer from "@/components/Footer";
@@ -59,20 +59,6 @@ const Index = () => {
       title: "Background Remover",
       description: "Remove image backgrounds instantly using AI",
       route: "/remove-background"
-    },
-    {
-      icon: Lock,
-      title: "Protect PDF",
-      description: "Add password protection to your PDF files",
-      route: "/protect-pdf",
-      comingSoon: true
-    },
-    {
-      icon: RotateCw,
-      title: "Rotate PDF",
-      description: "Rotate PDF pages to the correct orientation",
-      route: "/rotate-pdf",
-      comingSoon: true
     }
   ];
 
@@ -183,19 +169,13 @@ const Index = () => {
             {/* Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 stagger-children">
               {tools.map((tool, index) => (
-                <div key={index} className="relative">
-                  <ToolCard
-                    icon={tool.icon}
-                    title={tool.title}
-                    description={tool.description}
-                    route={tool.route}
-                  />
-                  {tool.comingSoon && (
-                    <div className="absolute top-3 right-3 bg-gradient-to-r from-primary/80 to-primary text-primary-foreground text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full shadow-sm">
-                      Coming Soon
-                    </div>
-                  )}
-                </div>
+                <ToolCard
+                  key={index}
+                  icon={tool.icon}
+                  title={tool.title}
+                  description={tool.description}
+                  route={tool.route}
+                />
               ))}
             </div>
           </div>
