@@ -4,7 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
-import MergePDF from "./pages/MergePDF";
+import MergePDF from "./pages/merge-pdf";
 import CompressPDF from "./pages/CompressPDF";
 import SplitPDF from "./pages/SplitPDF";
 import PdfToWord from "./pages/PdfToWord";
@@ -30,7 +30,7 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
-          <Route path="/merge-pdf" element={<MergePDF />} />
+          <Route path="/merge-pdf" element={<merge-pdf />} />
           <Route path="/compress-pdf" element={<CompressPDF />} />
           <Route path="/split-pdf" element={<SplitPDF />} />
           <Route path="/pdf-to-word" element={<PdfToWord />} />
