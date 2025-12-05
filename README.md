@@ -22,6 +22,8 @@ Hey Guys , features are:
 
 9. Background Remover: https://pdf-inity.vercel.app/remove-background
 
+10. Pdf - Editor : https://pdf-inity.vercel.app/pdf-editor
+
 
 U can email me :
 devritika.gaur@gmail.com
