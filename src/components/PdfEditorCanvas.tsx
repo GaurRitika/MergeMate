@@ -20,6 +20,9 @@ import {
   ChevronRight,
   Undo,
   Palette,
+  MousePointer2,
+  Edit3,
+  Bold,
 } from "lucide-react";
 import {
   Annotation,
@@ -28,11 +31,13 @@ import {
   DrawAnnotation,
   ShapeAnnotation,
   ImageAnnotation,
+  ExtractedTextItem,
   renderPageToCanvas,
   generateThumbnails,
   applyAnnotationsAndSave,
   downloadPdf,
   generateId,
+  extractTextFromPage,
 } from "@/utils/pdfEditor";
 import {
   DndContext,
@@ -51,8 +56,9 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { toast } from "sonner";
 
-type Tool = "select" | "text" | "highlight" | "draw" | "rectangle" | "circle" | "arrow" | "image";
+type Tool = "select" | "editText" | "text" | "highlight" | "draw" | "rectangle" | "circle" | "arrow" | "image";
 
 interface PdfEditorCanvasProps {
   pdfBytes: Uint8Array;
@@ -154,9 +160,19 @@ const PdfEditorCanvas = ({ pdfBytes, pageCount, fileName }: PdfEditorCanvasProps
   const [isProcessing, setIsProcessing] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   
+  // Text editing state
+  const [extractedText, setExtractedText] = useState<ExtractedTextItem[]>([]);
+  const [selectedTextItem, setSelectedTextItem] = useState<ExtractedTextItem | null>(null);
+  const [isExtractingText, setIsExtractingText] = useState(false);
+  const [editingTextId, setEditingTextId] = useState<string | null>(null);
+  const [editingTextValue, setEditingTextValue] = useState("");
+  const [textEditColor, setTextEditColor] = useState("#000000");
+  const [textEditFontSize, setTextEditFontSize] = useState(12);
+  
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const textEditRef = useRef<HTMLInputElement>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -186,6 +202,46 @@ const PdfEditorCanvas = ({ pdfBytes, pageCount, fileName }: PdfEditorCanvasProps
     };
     loadThumbnails();
   }, [pdfBytes, pageCount]);
+
+  // Extract text from current page when switching to editText mode
+  useEffect(() => {
+    const extractText = async () => {
+      if (tool !== "editText") return;
+      
+      setIsExtractingText(true);
+      try {
+        const pdfData = new Uint8Array(pdfBytes);
+        const pageText = await extractTextFromPage(pdfData, currentPage);
+        
+        // Merge with existing extracted text, keeping edits for this page
+        setExtractedText(prev => {
+          const otherPageText = prev.filter(t => t.pageIndex !== currentPage);
+          const existingEdits = prev.filter(t => t.pageIndex === currentPage && t.isEdited);
+          
+          // For items that were edited, keep the edited version
+          const mergedText = pageText.map(newItem => {
+            const existingEdit = existingEdits.find(e => 
+              Math.abs(e.x - newItem.x) < 5 && 
+              Math.abs(e.y - newItem.y) < 5 &&
+              e.originalText === newItem.originalText
+            );
+            return existingEdit || newItem;
+          });
+          
+          return [...otherPageText, ...mergedText];
+        });
+        
+        toast.success(`Found ${pageText.length} text elements on this page`);
+      } catch (error) {
+        console.error('Failed to extract text:', error);
+        toast.error('Failed to extract text from page');
+      } finally {
+        setIsExtractingText(false);
+      }
+    };
+    
+    extractText();
+  }, [tool, currentPage, pdfBytes]);
 
   // Render current page
   useEffect(() => {
@@ -489,14 +545,17 @@ const PdfEditorCanvas = ({ pdfBytes, pageCount, fileName }: PdfEditorCanvasProps
     setIsProcessing(true);
     try {
       const finalPageOrder = pageOrder.map(id => parseInt(id.split("-")[1]));
+      const editedItems = extractedText.filter(t => t.isEdited);
       const editedPdfBytes = await applyAnnotationsAndSave(
         pdfBytes,
         annotations,
         finalPageOrder,
         deletedPages,
-        rotations
+        rotations,
+        editedItems.length > 0 ? editedItems : undefined
       );
       downloadPdf(editedPdfBytes, `edited_${fileName}`);
+      toast.success("PDF downloaded successfully!");
     } catch (error) {
       console.error("Error saving PDF:", error);
     } finally {
@@ -505,8 +564,9 @@ const PdfEditorCanvas = ({ pdfBytes, pageCount, fileName }: PdfEditorCanvasProps
   };
 
   const tools: { id: Tool; icon: React.ReactNode; label: string }[] = [
-    { id: "select", icon: <ChevronRight className="w-4 h-4" />, label: "Select" },
-    { id: "text", icon: <Type className="w-4 h-4" />, label: "Text" },
+    { id: "select", icon: <MousePointer2 className="w-4 h-4" />, label: "Select" },
+    { id: "editText", icon: <Edit3 className="w-4 h-4" />, label: "Edit Text" },
+    { id: "text", icon: <Type className="w-4 h-4" />, label: "Add Text" },
     { id: "highlight", icon: <Highlighter className="w-4 h-4" />, label: "Highlight" },
     { id: "draw", icon: <Pencil className="w-4 h-4" />, label: "Draw" },
     { id: "rectangle", icon: <Square className="w-4 h-4" />, label: "Rectangle" },
@@ -514,6 +574,49 @@ const PdfEditorCanvas = ({ pdfBytes, pageCount, fileName }: PdfEditorCanvasProps
     { id: "arrow", icon: <ArrowRight className="w-4 h-4" />, label: "Arrow" },
     { id: "image", icon: <ImagePlus className="w-4 h-4" />, label: "Image" },
   ];
+
+  // Handle clicking on extracted text
+  const handleTextItemClick = (item: ExtractedTextItem) => {
+    setEditingTextId(item.id);
+    setEditingTextValue(item.text);
+    setTextEditFontSize(item.fontSize);
+    setSelectedTextItem(item);
+    setTimeout(() => textEditRef.current?.focus(), 50);
+  };
+
+  // Save edited text
+  const handleTextEditSave = () => {
+    if (!editingTextId || !editingTextValue.trim()) {
+      setEditingTextId(null);
+      setSelectedTextItem(null);
+      return;
+    }
+    
+    setExtractedText(prev => prev.map(item => {
+      if (item.id === editingTextId) {
+        return {
+          ...item,
+          text: editingTextValue,
+          isEdited: true,
+        };
+      }
+      return item;
+    }));
+    
+    setEditingTextId(null);
+    setSelectedTextItem(null);
+    toast.success("Text updated");
+  };
+
+  // Cancel text editing
+  const handleTextEditCancel = () => {
+    setEditingTextId(null);
+    setSelectedTextItem(null);
+    setEditingTextValue("");
+  };
+
+  // Get current page extracted text
+  const currentPageText = extractedText.filter(t => t.pageIndex === currentPage);
 
   return (
     <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-card">
@@ -578,6 +681,16 @@ const PdfEditorCanvas = ({ pdfBytes, pageCount, fileName }: PdfEditorCanvasProps
                 step={2}
                 className="w-20"
               />
+            </div>
+          )}
+
+          {/* Edit Text Mode Hint */}
+          {tool === "editText" && (
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+              <Edit3 className="w-4 h-4 text-blue-500" />
+              <span className="text-xs text-blue-600 dark:text-blue-400">
+                Click on any text to edit it
+              </span>
             </div>
           )}
 
@@ -698,6 +811,84 @@ const PdfEditorCanvas = ({ pdfBytes, pageCount, fileName }: PdfEditorCanvasProps
                 <div className="flex gap-2">
                   <Button size="sm" onClick={handleAddText}>Add</Button>
                   <Button size="sm" variant="ghost" onClick={() => setTextPosition(null)}>Cancel</Button>
+                </div>
+              </div>
+            )}
+
+            {/* Editable Text Overlays */}
+            {tool === "editText" && !isExtractingText && currentPageText.map((item) => {
+              const scale = 1.5 * zoom;
+              const isEditing = editingTextId === item.id;
+              
+              return (
+                <div
+                  key={item.id}
+                  className={`absolute transition-all ${
+                    isEditing 
+                      ? "z-30" 
+                      : "z-10 cursor-pointer hover:bg-primary/10"
+                  } ${item.isEdited ? "ring-2 ring-green-500/50" : ""}`}
+                  style={{
+                    left: item.x * scale,
+                    top: (item.y - item.height) * scale,
+                    minWidth: item.width * scale,
+                    minHeight: item.height * scale,
+                  }}
+                  onClick={() => !isEditing && handleTextItemClick(item)}
+                >
+                  {isEditing ? (
+                    <div className="bg-card border-2 border-primary rounded-lg p-2 shadow-elevated min-w-[200px]">
+                      <Input
+                        ref={textEditRef}
+                        value={editingTextValue}
+                        onChange={(e) => setEditingTextValue(e.target.value)}
+                        className="mb-2 text-sm font-medium"
+                        style={{ fontSize: `${Math.min(item.fontSize * 0.9, 16)}px` }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") handleTextEditSave();
+                          if (e.key === "Escape") handleTextEditCancel();
+                        }}
+                      />
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-xs text-muted-foreground">Original:</span>
+                        <span className="text-xs text-muted-foreground truncate max-w-[150px]">
+                          {item.originalText}
+                        </span>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button size="sm" onClick={handleTextEditSave} className="flex-1">
+                          Save
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={handleTextEditCancel}>
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div
+                      className={`px-1 py-0.5 rounded border border-transparent hover:border-primary/50 ${
+                        item.isEdited ? "bg-green-500/10" : "bg-blue-500/5"
+                      }`}
+                      style={{
+                        fontSize: `${item.fontSize * scale * 0.67}px`,
+                        lineHeight: 1,
+                      }}
+                    >
+                      <span className="whitespace-nowrap text-transparent select-none">
+                        {item.text}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+
+            {/* Loading indicator for text extraction */}
+            {tool === "editText" && isExtractingText && (
+              <div className="absolute inset-0 flex items-center justify-center bg-background/50 z-20">
+                <div className="bg-card border border-border rounded-lg p-4 shadow-elevated flex items-center gap-3">
+                  <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                  <span className="text-sm">Extracting text...</span>
                 </div>
               </div>
             )}

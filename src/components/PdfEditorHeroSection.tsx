@@ -17,7 +17,7 @@ const PdfEditorHeroSection = ({ onFileSelect }: PdfEditorHeroSectionProps) => {
             <span className="text-primary">Edit PDFs Online Free</span>
           </h1>
           <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto mb-8">
-            Add text, images, highlights, shapes, and draw on your PDF instantly. 
+            Edit existing text, add new text, images, highlights, shapes, and draw on your PDF instantly. 
             Rotate, delete, and rearrange pages. No signup required.
           </p>
         </div>

@@ -77,6 +77,7 @@ const PdfEditorFileUpload = ({ onFileSelected, hasFile }: PdfEditorFileUploadPro
         </p>
 
         <div className="flex flex-wrap justify-center gap-3 text-xs text-muted-foreground">
+          <span className="px-3 py-1 rounded-full bg-primary/10 text-primary font-medium">Edit Text</span>
           <span className="px-3 py-1 rounded-full bg-secondary">Add Text</span>
           <span className="px-3 py-1 rounded-full bg-secondary">Draw</span>
           <span className="px-3 py-1 rounded-full bg-secondary">Shapes</span>

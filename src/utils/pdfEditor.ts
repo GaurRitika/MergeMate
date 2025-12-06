@@ -61,6 +61,21 @@ export interface ImageAnnotation {
 
 export type Annotation = TextAnnotation | HighlightAnnotation | DrawAnnotation | ShapeAnnotation | ImageAnnotation;
 
+export interface ExtractedTextItem {
+  id: string;
+  text: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  fontSize: number;
+  fontName: string;
+  pageIndex: number;
+  transform: number[];
+  isEdited: boolean;
+  originalText: string;
+}
+
 export interface PageInfo {
   pageNumber: number;
   width: number;
@@ -164,6 +179,67 @@ export const generateThumbnails = async (pdfBytes: Uint8Array, pageCount: number
   return thumbnails;
 };
 
+// Extract text items from a PDF page with position information
+export const extractTextFromPage = async (
+  pdfBytes: Uint8Array,
+  pageIndex: number
+): Promise<ExtractedTextItem[]> => {
+  const pdfData = new Uint8Array(pdfBytes);
+  const loadingTask = pdfjsLib.getDocument({ data: pdfData });
+  const pdf = await loadingTask.promise;
+  const page = await pdf.getPage(pageIndex + 1);
+  const textContent = await page.getTextContent();
+  const viewport = page.getViewport({ scale: 1 });
+  
+  const textItems: ExtractedTextItem[] = [];
+  
+  for (const item of textContent.items) {
+    if ('str' in item && item.str.trim()) {
+      const tx = item.transform;
+      // Transform array: [scaleX, skewX, skewY, scaleY, translateX, translateY]
+      const fontSize = Math.sqrt(tx[0] * tx[0] + tx[1] * tx[1]);
+      const x = tx[4];
+      const y = viewport.height - tx[5]; // Convert to canvas coordinates
+      
+      textItems.push({
+        id: generateId(),
+        text: item.str,
+        x,
+        y,
+        width: item.width || fontSize * item.str.length * 0.6,
+        height: fontSize * 1.2,
+        fontSize,
+        fontName: item.fontName || 'Helvetica',
+        pageIndex,
+        transform: tx,
+        isEdited: false,
+        originalText: item.str,
+      });
+    }
+  }
+  
+  return textItems;
+};
+
+// Extract all text from all pages
+export const extractAllText = async (
+  pdfBytes: Uint8Array,
+  pageCount: number
+): Promise<ExtractedTextItem[]> => {
+  const allText: ExtractedTextItem[] = [];
+  
+  for (let i = 0; i < pageCount; i++) {
+    try {
+      const pageText = await extractTextFromPage(pdfBytes, i);
+      allText.push(...pageText);
+    } catch (error) {
+      console.error(`Error extracting text from page ${i + 1}:`, error);
+    }
+  }
+  
+  return allText;
+};
+
 const hexToRgb = (hex: string): { r: number; g: number; b: number } => {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
   return result
@@ -180,7 +256,8 @@ export const applyAnnotationsAndSave = async (
   annotations: Annotation[],
   pageOrder: number[],
   deletedPages: number[],
-  rotations: { [pageIndex: number]: number }
+  rotations: { [pageIndex: number]: number },
+  editedTextItems?: ExtractedTextItem[]
 ): Promise<Uint8Array> => {
   const pdfDoc = await PDFDocument.load(pdfBytes);
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
@@ -192,6 +269,34 @@ export const applyAnnotationsAndSave = async (
       const page = pdfDoc.getPage(pageIndex);
       const currentRotation = page.getRotation().angle;
       page.setRotation(degrees(currentRotation + rotation));
+    }
+  }
+  
+  // Apply edited text items - draw white rectangles to cover original text, then draw new text
+  if (editedTextItems && editedTextItems.length > 0) {
+    for (const textItem of editedTextItems) {
+      if (!textItem.isEdited || deletedPages.includes(textItem.pageIndex)) continue;
+      
+      const page = pdfDoc.getPage(textItem.pageIndex);
+      const { height: pageHeight } = page.getSize();
+      
+      // Cover original text with white rectangle
+      page.drawRectangle({
+        x: textItem.x - 2,
+        y: pageHeight - textItem.y - textItem.height + 2,
+        width: textItem.width + 4,
+        height: textItem.height + 4,
+        color: rgb(1, 1, 1),
+      });
+      
+      // Draw new text
+      page.drawText(textItem.text, {
+        x: textItem.x,
+        y: pageHeight - textItem.y,
+        size: textItem.fontSize,
+        font,
+        color: rgb(0, 0, 0),
+      });
     }
   }
   
