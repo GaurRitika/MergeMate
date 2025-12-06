@@ -173,8 +173,16 @@ const PdfEditorCanvas = ({ pdfBytes, pageCount, fileName }: PdfEditorCanvasProps
   // Generate thumbnails
   useEffect(() => {
     const loadThumbnails = async () => {
-      const thumbs = await generateThumbnails(pdfBytes, pageCount);
-      setThumbnails(thumbs);
+      try {
+        // Create a copy of pdfBytes to avoid issues
+        const pdfData = new Uint8Array(pdfBytes);
+        const thumbs = await generateThumbnails(pdfData, pageCount);
+        setThumbnails(thumbs);
+      } catch (error) {
+        console.error('Failed to generate thumbnails:', error);
+        // Set empty thumbnails on error
+        setThumbnails(Array(pageCount).fill(''));
+      }
     };
     loadThumbnails();
   }, [pdfBytes, pageCount]);

@@ -95,13 +95,19 @@ export const renderPageToCanvas = async (
   pageIndex: number,
   scale: number = 1.5
 ): Promise<{ canvas: HTMLCanvasElement; width: number; height: number }> => {
-  const loadingTask = pdfjsLib.getDocument({ data: pdfBytes });
+  // Create a copy of the bytes to avoid issues with detached buffers
+  const pdfData = new Uint8Array(pdfBytes);
+  const loadingTask = pdfjsLib.getDocument({ data: pdfData });
   const pdf = await loadingTask.promise;
   const page = await pdf.getPage(pageIndex + 1);
   
   const viewport = page.getViewport({ scale });
   const canvas = document.createElement('canvas');
-  const context = canvas.getContext('2d')!;
+  const context = canvas.getContext('2d');
+  
+  if (!context) {
+    throw new Error('Could not get canvas context');
+  }
   
   canvas.width = viewport.width;
   canvas.height = viewport.height;
@@ -116,24 +122,43 @@ export const renderPageToCanvas = async (
 
 export const generateThumbnails = async (pdfBytes: Uint8Array, pageCount: number): Promise<string[]> => {
   const thumbnails: string[] = [];
-  const loadingTask = pdfjsLib.getDocument({ data: pdfBytes });
-  const pdf = await loadingTask.promise;
   
-  for (let i = 0; i < pageCount; i++) {
-    const page = await pdf.getPage(i + 1);
-    const viewport = page.getViewport({ scale: 0.3 });
-    const canvas = document.createElement('canvas');
-    const context = canvas.getContext('2d')!;
+  try {
+    // Create a copy of the bytes to avoid issues with detached buffers
+    const pdfData = new Uint8Array(pdfBytes);
+    const loadingTask = pdfjsLib.getDocument({ data: pdfData });
+    const pdf = await loadingTask.promise;
     
-    canvas.width = viewport.width;
-    canvas.height = viewport.height;
-    
-    await page.render({
-      canvasContext: context,
-      viewport: viewport,
-    }).promise;
-    
-    thumbnails.push(canvas.toDataURL('image/jpeg', 0.7));
+    for (let i = 0; i < pageCount; i++) {
+      try {
+        const page = await pdf.getPage(i + 1);
+        const viewport = page.getViewport({ scale: 0.3 });
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+        
+        if (!context) {
+          thumbnails.push('');
+          continue;
+        }
+        
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        
+        await page.render({
+          canvasContext: context,
+          viewport: viewport,
+        }).promise;
+        
+        thumbnails.push(canvas.toDataURL('image/jpeg', 0.7));
+      } catch (pageError) {
+        console.error(`Error generating thumbnail for page ${i + 1}:`, pageError);
+        thumbnails.push('');
+      }
+    }
+  } catch (error) {
+    console.error('Error loading PDF for thumbnails:', error);
+    // Return empty thumbnails array if PDF loading fails
+    return Array(pageCount).fill('');
   }
   
   return thumbnails;
